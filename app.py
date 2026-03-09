@@ -8,20 +8,43 @@ import json
 # ==========================================
 st.set_page_config(page_title="LINE OA Audience Importer", page_icon="🟢", layout="centered")
 
-st.title("🟢 ZurQuiz: LINE Audience Uploader")
-st.markdown("อัปโหลดไฟล์ Excel เพื่อสร้างกลุ่มเป้าหมาย (Audience Group) ใน LINE OA รวดเดียว")
-st.divider()
+# ==========================================
+# ระบบรหัสผ่าน (Password Protection)
+# ==========================================
+# 🔑 กำหนดรหัสผ่านที่คุณต้องการให้ทีมงานใช้ที่นี่ (สามารถแก้ไขข้อความในเครื่องหมายคำพูดได้เลย)
+APP_PASSWORD = "ZurQuizAdmin" 
+
+def check_password():
+    """ฟังก์ชันตรวจสอบรหัสผ่านก่อนเข้าใช้งานแอปพลิเคชัน"""
+    # สร้างตัวแปรเก็บสถานะการล็อกอิน
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    # ถ้ายังไม่ได้ล็อกอิน ให้แสดงหน้าจอใส่รหัสผ่าน
+    if not st.session_state["authenticated"]:
+        st.title("🔒 เข้าสู่ระบบ")
+        st.markdown("กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานเครื่องมืออัปโหลดข้อมูล")
+        
+        password = st.text_input("รหัสผ่าน:", type="password")
+        
+        if st.button("เข้าสู่ระบบ", type="primary"):
+            if password == APP_PASSWORD:
+                st.session_state["authenticated"] = True
+                st.rerun() # รีเฟรชหน้าเว็บ 1 รอบเพื่อโหลดหน้าอัปโหลดไฟล์
+            else:
+                st.error("❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง")
+        return False
+        
+    return True # ถ้าล็อกอินแล้ว ให้คืนค่า True เพื่อให้โค้ดส่วนอื่นทำงานต่อ
 
 # ==========================================
-# ฟังก์ชันสำหรับอัปโหลดข้อมูล
+# ฟังก์ชันสำหรับอัปโหลดข้อมูลเข้า LINE OA
 # ==========================================
 def process_and_upload(df, token):
-    # ตรวจสอบชื่อคอลัมน์
     if 'UID' not in df.columns or 'Tag_Name' not in df.columns:
         st.error("❌ ไฟล์ต้องมีคอลัมน์ชื่อ 'UID' และ 'Tag_Name' ตัวสะกดตัวพิมพ์ใหญ่-เล็กต้องตรงกันครับ")
         return
 
-    # จัดกลุ่มข้อมูล
     grouped_data = df.groupby('Tag_Name')['UID'].apply(list).to_dict()
     
     url = "https://api.line.me/v2/bot/audienceGroup/upload"
@@ -30,7 +53,6 @@ def process_and_upload(df, token):
         "Content-Type": "application/json"
     }
 
-    # สร้าง Progress Bar
     progress_bar = st.progress(0)
     status_text = st.empty()
     
@@ -38,7 +60,6 @@ def process_and_upload(df, token):
     success_count = 0
 
     for i, (tag_name, uids) in enumerate(grouped_data.items()):
-        # กรองเฉพาะ UID ที่ถูกต้อง (ขึ้นต้นด้วย U และยาว 33 ตัว)
         valid_uids = [str(uid).strip() for uid in uids if isinstance(uid, str) and str(uid).startswith('U') and len(str(uid)) == 33]
         
         if not valid_uids:
@@ -63,7 +84,6 @@ def process_and_upload(df, token):
         except Exception as e:
             st.error(f"❌ เกิดข้อผิดพลาดกับกลุ่ม '{tag_name}': {e}")
             
-        # อัปเดต Progress Bar
         progress_bar.progress((i + 1) / total_tags)
         status_text.text(f"กำลังประมวลผล... {i + 1}/{total_tags}")
 
@@ -72,34 +92,46 @@ def process_and_upload(df, token):
         st.balloons()
 
 # ==========================================
-# ส่วนแสดงผล (User Interface)
+# ส่วนแสดงผลหลัก (User Interface)
 # ==========================================
-with st.container():
-    # 1. รับค่า Token แบบรหัสผ่าน (ซ่อนตัวอักษร)
-    access_token = st.text_input("🔑 ใส่ Channel Access Token (Long-lived):", type="password")
+
+# ดักเช็ครหัสผ่านตรงนี้ ถ้าฟังก์ชันคืนค่า True (ล็อกอินผ่าน) ถึงจะแสดงหน้าจออัปโหลด
+if check_password():
     
-    # 2. ปุ่มอัปโหลดไฟล์
-    st.markdown("📄 **อัปโหลดไฟล์ข้อมูล (รองรับ .xlsx หรือ .csv):**")
-    uploaded_file = st.file_uploader("ลากไฟล์มาวางที่นี่ หรือกดปุ่ม Browse", type=['xlsx', 'csv'])
-    
-    if uploaded_file is not None:
-        # พรีวิวข้อมูลให้ดูเบื้องต้น
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
-            else:
-                df = pd.read_excel(uploaded_file)
-                
-            st.write("ตัวอย่างข้อมูลที่อ่านได้ (5 แถวแรก):")
-            st.dataframe(df.head(), use_container_width=True)
-            
-            # 3. ปุ่มกดเพื่อเริ่มนำเข้าข้อมูล
-            if st.button("🚀 เริ่มนำเข้าข้อมูลไปยัง LINE OA", type="primary"):
-                if not access_token:
-                    st.error("⚠️ กรุณาใส่ Channel Access Token ก่อนครับ")
+    # จัดหน้าจอให้มีปุ่มออกจากระบบอยู่มุมขวาบน
+    col1, col2 = st.columns([8, 2])
+    with col1:
+        st.title("🟢 LINE OA: Bulk Import Audience Tags")
+    with col2:
+        if st.button("ออกจากระบบ"):
+            st.session_state["authenticated"] = False
+            st.rerun()
+
+    st.markdown("อัปโหลดไฟล์ Excel เพื่อสร้างกลุ่มเป้าหมาย (Audience Group) ใน LINE OA รวดเดียว")
+    st.divider()
+
+    with st.container():
+        access_token = st.text_input("🔑 ใส่ Channel Access Token (Long-lived):", type="password")
+        
+        st.markdown("📄 **อัปโหลดไฟล์ข้อมูล (รองรับ .xlsx หรือ .csv):**")
+        uploaded_file = st.file_uploader("ลากไฟล์มาวางที่นี่ หรือกดปุ่ม Browse", type=['xlsx', 'csv'])
+        
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
                 else:
-                    with st.spinner("กำลังเชื่อมต่อกับ LINE API..."):
-                        process_and_upload(df, access_token)
-                        
-        except Exception as e:
-            st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
+                    df = pd.read_excel(uploaded_file)
+                    
+                st.write("ตัวอย่างข้อมูลที่อ่านได้ (5 แถวแรก):")
+                st.dataframe(df.head(), use_container_width=True)
+                
+                if st.button("🚀 เริ่มนำเข้าข้อมูลไปยัง LINE OA", type="primary"):
+                    if not access_token:
+                        st.error("⚠️ กรุณาใส่ Channel Access Token ก่อนครับ")
+                    else:
+                        with st.spinner("กำลังเชื่อมต่อกับ LINE API..."):
+                            process_and_upload(df, access_token)
+                            
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถอ่านไฟล์ได้: {e}")
