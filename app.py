@@ -12,7 +12,7 @@ st.set_page_config(page_title="LINE OA Audience Importer", page_icon="🟢", lay
 # ระบบรหัสผ่าน (Password Protection)
 # ==========================================
 # 🔑 กำหนดรหัสผ่านที่คุณต้องการให้ทีมงานใช้ที่นี่ (สามารถแก้ไขข้อความในเครื่องหมายคำพูดได้เลย)
-APP_PASSWORD = "ZurQuizAdmin" 
+APP_PASSWORD = "ZurQuiz2026Importer" 
 
 def check_password():
     """ฟังก์ชันตรวจสอบรหัสผ่านก่อนเข้าใช้งานแอปพลิเคชัน"""
