@@ -6,7 +6,7 @@ import json
 # ==========================================
 # การตั้งค่าหน้าเว็บ
 # ==========================================
-st.set_page_config(page_title="LINE OA Audience Importer", page_icon="🟢", layout="centered")
+st.set_page_config(page_title="ZurQuiz: LINE Audience Uploader", page_icon="🟢", layout="centered")
 
 # ==========================================
 # ระบบรหัสผ่าน (Password Protection)
@@ -101,7 +101,7 @@ if check_password():
     # จัดหน้าจอให้มีปุ่มออกจากระบบอยู่มุมขวาบน
     col1, col2 = st.columns([8, 2])
     with col1:
-        st.title("🟢 LINE OA: Bulk Import Audience Tags")
+        st.title("🟢 ZurQuiz: LINE Audience Uploader")
     with col2:
         if st.button("ออกจากระบบ"):
             st.session_state["authenticated"] = False
