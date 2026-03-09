@@ -8,7 +8,7 @@ import json
 # ==========================================
 st.set_page_config(page_title="LINE OA Audience Importer", page_icon="🟢", layout="centered")
 
-st.title("🟢 LINE OA: Bulk Import Audience Tags")
+st.title("🟢 ZurQuiz: LINE Audience Uploader")
 st.markdown("อัปโหลดไฟล์ Excel เพื่อสร้างกลุ่มเป้าหมาย (Audience Group) ใน LINE OA รวดเดียว")
 st.divider()
 
